@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Кроссворд - BOOKCASE</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    background: transparent;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    font-family: 'Arial', sans-serif;
+  }
+  .crossword {
+    display: grid;
+    grid-template-columns: repeat(15, 44px);
+    grid-template-rows: repeat(14, 44px);
+    gap: 2px;
+    background: transparent;
+    padding: 60px;
+  }
+  .cell { 
+    width: 44px; 
+    height: 44px; 
+    position: relative;
+  }
+  .cell input {
+    width: 100%; 
+    height: 100%;
+    border: 2px solid #8B4513;
+    background: #FDF8F0;
+    text-align: center;
+    font-size: 22px;
+    font-weight: bold;
+    text-transform: uppercase;
+    outline: none;
+    border-radius: 4px;
+    color: #000;
+  }
+  .cell.empty { background: transparent; border: none; }
+  
+  .cell .number-top {
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 16px;
+    font-weight: bold;
+    color: #8B4513;
+    z-index: 10;
+  }
+  .cell .number-left {
+    position: absolute;
+    top: 50%;
+    left: -22px;
+    transform: translateY(-50%);
+    font-size: 16px;
+    font-weight: bold;
+    color: #8B4513;
+    z-index: 10;
+  }
+  
+  .hl-yellow input { border: 4px solid #FFD700; }
+  .hl-brown input { border: 4px solid #654321; }
+  .hl-red input { border: 4px solid #FF0000; }
+  .hl-purple input { border: 4px solid #800080; }
+  .hl-pink input { border: 4px solid #FF1493; }
+  .hl-orange input { border: 4px solid #FF8C00; }
+  .hl-blue input { border: 4px solid #0000CD; }
+  .hl-green input { border: 4px solid #008000; }
+  
+  .correct input { animation: flashGreen 0.5s; }
+  .wrong input { animation: flashRed 0.5s; }
+  @keyframes flashGreen {
+    0%, 100% { box-shadow: none; }
+    50% { box-shadow: 0 0 20px 8px rgba(57,255,20,0.9); }
+  }
+  @keyframes flashRed {
+    0%, 100% { box-shadow: none; }
+    50% { box-shadow: 0 0 20px 8px rgba(255,0,0,0.9); }
+  }
+</style>
+</head>
+<body>
+<div class="crossword" id="cw"></div>
+<script>
+const ROWS = 14, COLS = 15;
+const words = [
+  {w:"POLICEMAN", v:true, r:0, c:8, n:1},
+  {w:"KETTLE", v:true, r:1, c:2, n:2},
+  {w:"TOASTER", v:false, r:1, c:7, n:3},
+  {w:"HELICOPTER", v:false, r:5, c:0, n:4},
+  {w:"MOTORBIKE", v:true, r:4, c:11, n:5},
+  {w:"LAPTOP", v:false, r:7, c:7, n:6},
+  {w:"CAR", v:true, r:5, c:4, n:7},
+  {w:"GANGSTER", v:false, r:12, c:5, n:8}
+];
+const hl = {
+  "1,2":"hl-yellow",
+  "5,1":"hl-brown",
+  "1,8":"hl-red",
+  "7,8":"hl-purple",
+  "7,11":"hl-orange",
+  "5,4":"hl-blue",
+  "9,11":"hl-green",
+  "12,9":"hl-pink"
+};
+const grid = Array(ROWS).fill(null).map(()=>Array(COLS).fill(null));
+words.forEach(x=>{
+  for(let i=0;i<x.w.length;i++){
+    const r=x.v?x.r+i:x.r, c=x.v?x.c:x.c+i;
+    grid[r][c]=x.w[i];
+  }
+});
+const starts={};
+words.forEach(x=>{
+  const k=`${x.r},${x.c}`;
+  if(!starts[k])starts[k]=[];
+  starts[k].push(x);
+});
+const cw=document.getElementById('cw');
+const inputs={};
+for(let r=0;r<ROWS;r++){
+  for(let c=0;c<COLS;c++){
+    const cell=document.createElement('div');
+    cell.className='cell';
+    if(grid[r][c]){
+      const k=`${r},${c}`;
+      if(hl[k])cell.classList.add(hl[k]);
+      if(starts[k]){
+        starts[k].forEach(x=>{
+          const s=document.createElement('span');
+          s.textContent=x.n;
+          s.className=x.v?'number-top':'number-left';
+          cell.appendChild(s);
+        });
+      }
+      const inp=document.createElement('input');
+      inp.maxLength=1;
+      inp.dataset.r=r;inp.dataset.c=c;
+      inp.addEventListener('input',e=>check(e,r,c));
+      cell.appendChild(inp);
+      inputs[k]=inp;
+    }else cell.classList.add('empty');
+    cw.appendChild(cell);
+  }
+}
+function check(e,r,c){
+  e.target.value=e.target.value.toUpperCase().replace(/[^A-Z]/g,'');
+  words.forEach(x=>{
+    const cells=[];
+    for(let i=0;i<x.w.length;i++){
+      const rr=x.v?x.r+i:x.r, cc=x.v?x.c:x.c+i;
+      cells.push([rr,cc]);
+    }
+    if(!cells.some(([rr,cc])=>rr===r&&cc===c))return;
+    const vals=cells.map(([rr,cc])=>inputs[`${rr},${cc}`].value);
+    if(vals.some(v=>v.length!==1))return;
+    const word=vals.join('');
+    cells.forEach(([rr,cc])=>inputs[`${rr},${cc}`].parentElement.classList.remove('correct','wrong'));
+    if(word===x.w)cells.forEach(([rr,cc])=>inputs[`${rr},${cc}`].parentElement.classList.add('correct'));
+    else cells.forEach(([rr,cc])=>inputs[`${rr},${cc}`].parentElement.classList.add('wrong'));
+  });
+}
+</script>
+</body>
+</html>
